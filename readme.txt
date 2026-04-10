@@ -1,5 +1,5 @@
 go to this path:
-    cd "C:\Users\saies\Downloads\IPC Section Project"
+    cd "project_folder_location"
 
 if no virtual environment is created the use:
         python -m venv venv
