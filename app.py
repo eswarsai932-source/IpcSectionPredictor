@@ -133,33 +133,61 @@ if st.button("🚀 Analyze Complaint"):
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Similar Cases", "👨‍⚖️ Lawyers"])
 
     # ---------------- TAB 1 ----------------
-    with tab1:
+ with tab1:
 
-        for ipc, score in preds:
+    for ipc, score in preds:
+        ipc = str(ipc).strip()
 
-            st.subheader(f"⚖️ IPC Section {ipc}")
+        # color logic
+        if score >= 0.8:
+            color = "#22c55e"   # green
+        elif score >= 0.5:
+            color = "#f59e0b"   # yellow
+        else:
+            color = "#ef4444"   # red
 
-            # ✅ SAFE progress bar (no HTML)
-            st.progress(score)
+        st.markdown(f"""
+        <div style="
+            background:#2f2f2f;
+            padding:20px;
+            border-radius:14px;
+            margin-bottom:20px;
+            color:white;
+        ">
 
-            st.success(f"Confidence: {score*100:.1f}%")
+        <h4 style="color:#3b82f6;">⚖️ IPC Section {ipc}</h4>
 
-            st.markdown("**📖 Description:**")
-            st.write(explanation)
+        <!-- progress bar -->
+        <div style="
+            width:100%;
+            background:#d1d5db;
+            height:10px;
+            border-radius:10px;
+            margin:10px 0;
+        ">
+            <div style="
+                width:{score*100}%;
+                background:{color};
+                height:10px;
+                border-radius:10px;
+            "></div>
+        </div>
 
-            st.markdown("**🧾 Simple Explanation:**")
-            st.write(explanation)
+        <p><b>Confidence:</b> {score*100:.1f}%</p>
 
-            st.markdown("**⚖️ Punishment:**")
-            st.info("Information currently unavailable")
+        <p><b>📖 Description:</b><br>{explanation}</p>
 
-            st.divider()
+        <p><b>🧾 Simple Explanation:</b><br>{explanation}</p>
 
-        st.subheader("🧾 Legal Explanation")
-        st.info(explanation)
+        <p><b>⚖️ Punishment:</b><br>
+        Simple imprisonment or fine (if available)
+        </p>
 
-        report = generate_report(preds, explanation)
-        st.download_button("📄 Download Report", report, "ipc_report.txt")
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("### 🧾 Legal Explanation")
+    st.info(explanation)
 
     # ---------------- TAB 2 ----------------
     with tab2:
