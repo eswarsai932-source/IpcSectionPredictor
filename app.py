@@ -5,8 +5,6 @@ import joblib
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from predict_ipc_with_lookup import predict_ipc
-from dotenv import load_dotenv
-load_dotenv()
 
 # -------------------------------------------------
 # CONFIG
@@ -59,41 +57,56 @@ cases_df = load_cases()
 lawyers_df = load_lawyers()
 
 # -------------------------------------------------
-# 🔥 OPENROUTER LLM FUNCTION
+# ✅ FIXED OPENROUTER FUNCTION
 # -------------------------------------------------
 def get_llm_explanation(ipc, complaint):
     try:
+        api_key = st.secrets["OPENROUTER_API_KEY"]
+
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-                "Content-Type": "application/json"
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://your-app-name.streamlit.app",
+                "X-Title": "IPC Intelligence System"
             },
             json={
-                "model": "mistralai/mistral-7b-instruct",
+                "model": "openai/gpt-4o-mini",
                 "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a legal assistant for Indian Penal Code."
+                    },
                     {
                         "role": "user",
                         "content": f"""
-Explain IPC Section {ipc} in simple terms.
+Explain IPC Section {ipc} clearly.
 
 Complaint:
 {complaint}
 
 Give:
-1. Description
-2. Simple explanation
-3. Punishment
+Description:
+Simple Explanation:
+Punishment:
 """
                     }
-                ]
+                ],
+                "temperature": 0.3
             }
         )
 
-        return response.json()["choices"][0]["message"]["content"]
+        data = response.json()
 
-    except:
-        return "⚠️ LLM explanation not available"
+        # 🔥 Show actual error if exists
+        if "error" in data:
+            return f"❌ API Error: {data['error']}"
+
+        return data["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        return f"❌ Exception: {str(e)}"
 
 # -------------------------------------------------
 # FUNCTIONS
@@ -162,9 +175,7 @@ if st.button("🚀 Analyze Complaint"):
     with st.spinner("🧠 AI analyzing complaint..."):
 
         result = predict_ipc(complaint)
-
         preds = [(result.get("section", "N/A"), result.get("confidence", 0.0))]
-
         cases = get_similar_cases(complaint)
 
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Similar Cases", "👨‍⚖️ Lawyers"])
@@ -175,10 +186,8 @@ if st.button("🚀 Analyze Complaint"):
         for ipc, score in preds:
             ipc = str(ipc).strip()
 
-            # 🔥 Get LLM explanation
             llm_explanation = get_llm_explanation(ipc, complaint)
 
-            # color logic
             if score >= 0.8:
                 color = "#22c55e"
             elif score >= 0.5:
@@ -211,10 +220,14 @@ if st.button("🚀 Analyze Complaint"):
         border-radius:10px;
     "></div>
 </div>
+
 <p><b>Confidence:</b> {score*100:.1f}%</p>
+
 <p><b>🤖 AI Explanation:</b><br>{llm_explanation}</p>
+
 </div>
 """, unsafe_allow_html=True)
+
         report = generate_report(preds, llm_explanation)
         st.download_button("📄 Download Report", report, "ipc_report.txt")
 
