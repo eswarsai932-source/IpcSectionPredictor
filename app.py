@@ -4,7 +4,7 @@ os.environ["OPENAI_API_KEY"] = "sk-dummy"
 import streamlit as st
 import joblib
 import pandas as pd
-from crew_ai.crew_runner import run_pipeline
+from predict_ipc_with_lookup import predict_ipc
 
 # -------------------------------------------------
 # CONFIG
@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------
-# SAFE HTML RENDER FUNCTION (🔥 FIX)
+# SAFE HTML RENDER FUNCTION (UNCHANGED)
 # -------------------------------------------------
 def render_html(html):
     st.markdown(html, unsafe_allow_html=True)
@@ -139,7 +139,14 @@ if st.button("🚀 Analyze Complaint"):
         st.stop()
 
     with st.spinner("🧠 AI analyzing..."):
-        preds, explanation, cases, ipc_details = run_pipeline(complaint, cases_df)
+
+        # ✅ REPLACED run_pipeline
+        result = predict_ipc(complaint)
+
+        preds = [(result.get("section", "N/A"), result.get("confidence", 0.0))]
+        explanation = result.get("description", "No explanation available")
+        cases = pd.DataFrame()  # temporary (we fix later)
+        ipc_details = {}
 
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Cases", "👨‍⚖️ Lawyers"])
 
@@ -157,18 +164,9 @@ if st.button("🚀 Analyze Complaint"):
             else:
                 bar_class = "bar-red"
 
-            description = details.get("description", "").strip()
-            simple_exp = details.get("simple_description", "").strip()
-            punishment = details.get("punishment", "").strip()
-
-            if not description or description.lower() in ["n/a", "not available"]:
-                description = "<span class='empty-text'>Information currently unavailable</span>"
-
-            if not simple_exp or simple_exp.lower() in ["n/a", "not available"]:
-                simple_exp = "<span class='empty-text'>Information currently unavailable</span>"
-
-            if not punishment or punishment.lower() in ["n/a", "not available"]:
-                punishment = "<span class='empty-text'>Information currently unavailable</span>"
+            description = details.get("description", explanation)
+            simple_exp = details.get("simple_description", explanation)
+            punishment = details.get("punishment", "Information currently unavailable")
 
             render_html(f"""
             <div class="card">
@@ -194,7 +192,7 @@ if st.button("🚀 Analyze Complaint"):
 
         render_html("<h3>📚 Similar Cases</h3>")
 
-        if cases is not None and not cases.empty:
+        if not cases.empty:
             for _, row in cases.iterrows():
                 render_html(f"""
                 <div class="card">
@@ -220,6 +218,5 @@ if st.button("🚀 Analyze Complaint"):
     render_html("""
     <div style="text-align:center;margin-top:20px">
         <p style="color:#94a3b8">⚠️ Educational purpose only</p>
-        <p style="color:#22c55e">🚀 Hybrid AI Active</p>
     </div>
     """)
