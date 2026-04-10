@@ -57,7 +57,7 @@ cases_df = load_cases()
 lawyers_df = load_lawyers()
 
 # -------------------------------------------------
-# ✅ FIXED OPENROUTER FUNCTION
+# OPENROUTER FUNCTION
 # -------------------------------------------------
 def get_llm_explanation(ipc, complaint):
     try:
@@ -99,7 +99,6 @@ Punishment:
 
         data = response.json()
 
-        # 🔥 Show actual error if exists
         if "error" in data:
             return f"❌ API Error: {data['error']}"
 
@@ -175,7 +174,15 @@ if st.button("🚀 Analyze Complaint"):
     with st.spinner("🧠 AI analyzing complaint..."):
 
         result = predict_ipc(complaint)
-        preds = [(result.get("section", "N/A"), result.get("confidence", 0.0))]
+
+        sections_text = result.get("description", "")
+
+        sections = [
+            s.strip() for s in sections_text.replace("Predicted IPC Sections:", "").split(",")
+        ]
+
+        preds = [(sec, result.get("confidence", 0.0)) for sec in sections if sec]
+
         cases = get_similar_cases(complaint)
 
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Similar Cases", "👨‍⚖️ Lawyers"])
@@ -183,10 +190,12 @@ if st.button("🚀 Analyze Complaint"):
     # ---------------- TAB 1 ----------------
     with tab1:
 
+        all_explanations = []
+
         for ipc, score in preds:
             ipc = str(ipc).strip()
-
             llm_explanation = get_llm_explanation(ipc, complaint)
+            all_explanations.append(f"IPC {ipc}:\n{llm_explanation}\n")
 
             if score >= 0.8:
                 color = "#22c55e"
@@ -222,13 +231,11 @@ if st.button("🚀 Analyze Complaint"):
 </div>
 
 <p><b>Confidence:</b> {score*100:.1f}%</p>
-
 <p><b>🤖 AI Explanation:</b><br>{llm_explanation}</p>
-
 </div>
 """, unsafe_allow_html=True)
 
-        report = generate_report(preds, llm_explanation)
+        report = generate_report(preds, "\n".join(all_explanations))
         st.download_button("📄 Download Report", report, "ipc_report.txt")
 
     # ---------------- TAB 2 ----------------
