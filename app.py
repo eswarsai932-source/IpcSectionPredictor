@@ -156,7 +156,7 @@ complaint = st.text_area("📝 Enter Complaint", height=150)
 # -------------------------------------------------
 # BUTTON
 # -------------------------------------------------
-if st.button("🚀 Analyze Complaint"):
+if st.button(" Analyze Complaint"):
 
     if not complaint.strip():
         st.warning("Please enter complaint text.")
@@ -221,7 +221,7 @@ if st.button("🚀 Analyze Complaint"):
 </div>
 
 <p><b>Confidence:</b> {score*100:.1f}%</p>
-<p><b>🤖 AI Explanation:</b><br>{llm_explanation}</p>
+<p><b>Explanation:</b><br>{llm_explanation}</p>
 
 </div>
 """, unsafe_allow_html=True)
