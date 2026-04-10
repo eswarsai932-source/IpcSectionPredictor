@@ -5,11 +5,8 @@ import joblib
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from predict_ipc_with_lookup import predict_ipc
-
-# -------------------------------------------------
-# 🔑 SET YOUR OPENROUTER API KEY HERE
-# -------------------------------------------------
-os.environ["OPENROUTER_API_KEY"] = "YOUR_OPENROUTER_API_KEY"
+from dotenv import load_dotenv
+load_dotenv()
 
 # -------------------------------------------------
 # CONFIG
