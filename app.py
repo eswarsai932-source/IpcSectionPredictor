@@ -57,9 +57,9 @@ cases_df = load_cases()
 lawyers_df = load_lawyers()
 
 # -------------------------------------------------
-# OPENROUTER FUNCTION
+# OPENROUTER FUNCTION (FAST)
 # -------------------------------------------------
-def get_llm_explanation(ipc, complaint):
+def get_llm_explanation(sections, complaint):
     try:
         api_key = st.secrets["OPENROUTER_API_KEY"]
 
@@ -75,25 +75,20 @@ def get_llm_explanation(ipc, complaint):
                 "model": "openai/gpt-4o-mini",
                 "messages": [
                     {
-                        "role": "system",
-                        "content": "You are a legal assistant for Indian Penal Code."
-                    },
-                    {
                         "role": "user",
                         "content": f"""
-Explain IPC Section {ipc} clearly.
+Explain IPC Sections: {sections}
 
 Complaint:
 {complaint}
 
 Give:
-Description:
-Simple Explanation:
-Punishment:
+- Description
+- Simple Explanation
+- Punishment
 """
                     }
-                ],
-                "temperature": 0.3
+                ]
             }
         )
 
@@ -108,7 +103,7 @@ Punishment:
         return f"❌ Exception: {str(e)}"
 
 # -------------------------------------------------
-# FUNCTIONS
+# OTHER FUNCTIONS
 # -------------------------------------------------
 def recommend_lawyers(predicted):
     mapping = {
@@ -156,11 +151,7 @@ st.markdown("""
 # -------------------------------------------------
 # INPUT
 # -------------------------------------------------
-complaint = st.text_area(
-    "📝 Enter Complaint",
-    placeholder="Describe the incident in detail...",
-    height=150
-)
+complaint = st.text_area("📝 Enter Complaint", height=150)
 
 # -------------------------------------------------
 # BUTTON
@@ -185,17 +176,16 @@ if st.button("🚀 Analyze Complaint"):
 
         cases = get_similar_cases(complaint)
 
+        # 🔥 CALL LLM ONLY ONCE (FAST)
+        all_sections_text = ", ".join(sections)
+        llm_explanation = get_llm_explanation(all_sections_text, complaint)
+
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Similar Cases", "👨‍⚖️ Lawyers"])
 
     # ---------------- TAB 1 ----------------
     with tab1:
 
-        all_explanations = []
-
         for ipc, score in preds:
-            ipc = str(ipc).strip()
-            llm_explanation = get_llm_explanation(ipc, complaint)
-            all_explanations.append(f"IPC {ipc}:\n{llm_explanation}\n")
 
             if score >= 0.8:
                 color = "#22c55e"
@@ -232,15 +222,15 @@ if st.button("🚀 Analyze Complaint"):
 
 <p><b>Confidence:</b> {score*100:.1f}%</p>
 <p><b>🤖 AI Explanation:</b><br>{llm_explanation}</p>
+
 </div>
 """, unsafe_allow_html=True)
 
-        report = generate_report(preds, "\n".join(all_explanations))
+        report = generate_report(preds, llm_explanation)
         st.download_button("📄 Download Report", report, "ipc_report.txt")
 
     # ---------------- TAB 2 ----------------
     with tab2:
-
         st.subheader("📚 Similar Cases")
 
         if not cases.empty:
@@ -258,7 +248,6 @@ if st.button("🚀 Analyze Complaint"):
 
     # ---------------- TAB 3 ----------------
     with tab3:
-
         st.subheader("👨‍⚖️ Recommended Lawyers")
 
         lawyers = recommend_lawyers(preds)
