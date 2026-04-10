@@ -17,13 +17,13 @@ st.set_page_config(
 )
 
 # -------------------------------------------------
-# SAFE HTML RENDER FUNCTION (UNCHANGED)
+# HTML RENDER
 # -------------------------------------------------
 def render_html(html):
     st.markdown(html, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# UI STYLE (UNCHANGED)
+# 🌟 IMPROVED UI STYLE
 # -------------------------------------------------
 render_html("""
 <style>
@@ -32,27 +32,30 @@ body { background-color: #f5f7fb; }
 .header {
     text-align: center;
     padding: 25px;
-    border-radius: 16px;
-    background: linear-gradient(90deg, #2563eb, #38bdf8);
+    border-radius: 14px;
+    background: linear-gradient(90deg, #1e3a8a, #38bdf8);
     color: white;
     margin-bottom: 25px;
 }
 
+/* CLEAN WHITE CARDS */
 .card {
-    background: #3e3f40;
+    background: #ffffff;
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 14px;
     margin-bottom: 20px;
-    color: ivory;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
+    color: #111827;
+    box-shadow: 0px 6px 18px rgba(0,0,0,0.08);
 }
 
+/* TITLES */
 .section-title {
-    color: #2563eb;
-    font-size: 18px;
-    margin-bottom: 10px;
+    color: #1e40af;
+    font-size: 20px;
+    font-weight: bold;
 }
 
+/* PROGRESS BAR */
 .bar {
     height: 10px;
     background: #e5e7eb;
@@ -65,9 +68,17 @@ body { background-color: #f5f7fb; }
 .bar-yellow { background: linear-gradient(90deg, #f59e0b, #facc15); }
 .bar-red { background: linear-gradient(90deg, #dc2626, #f87171); }
 
-.empty-text {
-    color: #6b7280;
-    font-style: italic;
+/* TEXT COLORS */
+.confidence { color: #16a34a; font-weight: bold; }
+.muted { color: #6b7280; }
+
+/* BUTTON */
+.stButton>button {
+    background: linear-gradient(90deg, #2563eb, #38bdf8);
+    color: white;
+    border-radius: 10px;
+    height: 45px;
+    font-weight: bold;
 }
 </style>
 """)
@@ -118,7 +129,6 @@ def generate_report(preds, explanation):
     report += "\nExplanation:\n" + explanation
     return report
 
-# ✅ NEW: SIMILARITY FUNCTION
 def get_similar_cases(user_text, top_k=5):
     try:
         user_vec = vectorizer.transform([user_text])
@@ -128,13 +138,11 @@ def get_similar_cases(user_text, top_k=5):
         cases_df["similarity"] = sims
 
         results = cases_df.sort_values(by="similarity", ascending=False).head(top_k)
-
-        # filter low similarity
         results = results[results["similarity"] > 0.2]
 
         return results
 
-    except Exception as e:
+    except:
         return pd.DataFrame()
 
 # -------------------------------------------------
@@ -143,13 +151,18 @@ def get_similar_cases(user_text, top_k=5):
 render_html("""
 <div class="header">
     <h1>⚖️ IPC Intelligence System</h1>
+    <p>AI-powered legal complaint analyzer</p>
 </div>
 """)
 
 # -------------------------------------------------
 # INPUT
 # -------------------------------------------------
-complaint = st.text_area("📝 Enter Complaint", height=150)
+complaint = st.text_area(
+    "📝 Enter Complaint",
+    placeholder="Describe the incident in detail...",
+    height=150
+)
 
 # -------------------------------------------------
 # BUTTON
@@ -160,19 +173,17 @@ if st.button("🚀 Analyze Complaint"):
         st.warning("Please enter complaint text.")
         st.stop()
 
-    with st.spinner("🧠 AI analyzing..."):
+    with st.spinner("🧠 AI analyzing complaint..."):
 
         result = predict_ipc(complaint)
 
         preds = [(result.get("section", "N/A"), result.get("confidence", 0.0))]
         explanation = result.get("description", "No explanation available")
 
-        # ✅ FIXED: GET REAL SIMILAR CASES
         cases = get_similar_cases(complaint)
-
         ipc_details = {}
 
-    tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Cases", "👨‍⚖️ Lawyers"])
+    tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Similar Cases", "👨‍⚖️ Lawyers"])
 
     # ---------------- TAB 1 ----------------
     with tab1:
@@ -194,18 +205,21 @@ if st.button("🚀 Analyze Complaint"):
 
             render_html(f"""
             <div class="card">
-                <div class="section-title">IPC Section {ipc}</div>
+                <div class="section-title">⚖️ IPC Section {ipc}</div>
+
                 <div class="bar">
                     <div class="{bar_class}" style="width:{score*100}%; height:10px;"></div>
                 </div>
-                <p><b>Confidence:</b> {score*100:.1f}%</p>
+
+                <p class="confidence">Confidence: {score*100:.1f}%</p>
+
                 <p><b>📖 Description:</b><br>{description}</p>
                 <p><b>🧾 Simple Explanation:</b><br>{simple_exp}</p>
                 <p><b>⚖️ Punishment:</b><br>{punishment}</p>
             </div>
             """)
 
-        render_html(f"<h3>🧾 Legal Explanation</h3>")
+        render_html("<h3>🧾 Legal Explanation</h3>")
         render_html(f"<div class='card'>{explanation}</div>")
 
         report = generate_report(preds, explanation)
@@ -220,9 +234,9 @@ if st.button("🚀 Analyze Complaint"):
             for _, row in cases.iterrows():
                 render_html(f"""
                 <div class="card">
-                    <b>Similarity:</b> {row.get('similarity', 0):.2f}<br><br>
-                    {row.get('complaint_text', '')}<br><br>
-                    <b>IPC:</b> {row.get('ipc_sections', '')}
+                    <p><b>Similarity:</b> {row.get('similarity', 0):.2f}</p>
+                    <p>{row.get('complaint_text', '')}</p>
+                    <p><b>IPC Sections:</b> {row.get('ipc_sections', '')}</p>
                 </div>
                 """)
         else:
@@ -240,6 +254,6 @@ if st.button("🚀 Analyze Complaint"):
 
     render_html("""
     <div style="text-align:center;margin-top:20px">
-        <p style="color:#94a3b8">⚠️ Educational purpose only</p>
+        <p class="muted">⚠️ Educational purpose only</p>
     </div>
     """)
