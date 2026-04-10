@@ -1,11 +1,15 @@
 import os
-os.environ["OPENAI_API_KEY"] = "sk-dummy"
-
+import requests
 import streamlit as st
 import joblib
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from predict_ipc_with_lookup import predict_ipc
+
+# -------------------------------------------------
+# 🔑 SET YOUR OPENROUTER API KEY HERE
+# -------------------------------------------------
+os.environ["OPENROUTER_API_KEY"] = "YOUR_OPENROUTER_API_KEY"
 
 # -------------------------------------------------
 # CONFIG
@@ -56,6 +60,43 @@ def load_lawyers():
 model, vectorizer, mlb = load_models()
 cases_df = load_cases()
 lawyers_df = load_lawyers()
+
+# -------------------------------------------------
+# 🔥 OPENROUTER LLM FUNCTION
+# -------------------------------------------------
+def get_llm_explanation(ipc, complaint):
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "mistralai/mistral-7b-instruct",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": f"""
+Explain IPC Section {ipc} in simple terms.
+
+Complaint:
+{complaint}
+
+Give:
+1. Description
+2. Simple explanation
+3. Punishment
+"""
+                    }
+                ]
+            }
+        )
+
+        return response.json()["choices"][0]["message"]["content"]
+
+    except:
+        return "⚠️ LLM explanation not available"
 
 # -------------------------------------------------
 # FUNCTIONS
@@ -126,7 +167,6 @@ if st.button("🚀 Analyze Complaint"):
         result = predict_ipc(complaint)
 
         preds = [(result.get("section", "N/A"), result.get("confidence", 0.0))]
-        explanation = result.get("description", "No explanation available")
 
         cases = get_similar_cases(complaint)
 
@@ -138,6 +178,10 @@ if st.button("🚀 Analyze Complaint"):
         for ipc, score in preds:
             ipc = str(ipc).strip()
 
+            # 🔥 Get LLM explanation
+            llm_explanation = get_llm_explanation(ipc, complaint)
+
+            # color logic
             if score >= 0.8:
                 color = "#22c55e"
             elif score >= 0.5:
@@ -170,22 +214,12 @@ if st.button("🚀 Analyze Complaint"):
         border-radius:10px;
     "></div>
 </div>
-
 <p><b>Confidence:</b> {score*100:.1f}%</p>
-
-<p><b>📖 Description:</b><br>{explanation}</p>
-
-<p><b>🧾 Simple Explanation:</b><br>{explanation}</p>
-
-<p><b>⚖️ Punishment:</b><br>
-Simple imprisonment or fine (if available)
-</p>
-
+<p><b>🤖 AI Explanation:</b><br>{llm_explanation}</p>
 </div>
 """, unsafe_allow_html=True)
-
-        st.markdown("### 🧾 Legal Explanation")
-        st.info(explanation)
+        report = generate_report(preds, llm_explanation)
+        st.download_button("📄 Download Report", report, "ipc_report.txt")
 
     # ---------------- TAB 2 ----------------
     with tab2:
