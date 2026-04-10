@@ -6,3 +6,4 @@ joblib
 sentence-transformers
 torch
 scipy
+python-dotenv
