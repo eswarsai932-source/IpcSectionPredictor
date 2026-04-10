@@ -4,6 +4,7 @@ os.environ["OPENAI_API_KEY"] = "sk-dummy"
 import streamlit as st
 import joblib
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 from predict_ipc_with_lookup import predict_ipc
 
 # -------------------------------------------------
@@ -84,7 +85,9 @@ def load_models():
 
 @st.cache_data
 def load_cases():
-    return pd.read_csv("ipc_training_dataset.csv")
+    df = pd.read_csv("ipc_training_dataset.csv")
+    df["ipc_sections"] = df["ipc_sections"].astype(str).str.strip(",")
+    return df
 
 @st.cache_data
 def load_lawyers():
@@ -115,6 +118,25 @@ def generate_report(preds, explanation):
     report += "\nExplanation:\n" + explanation
     return report
 
+# ✅ NEW: SIMILARITY FUNCTION
+def get_similar_cases(user_text, top_k=5):
+    try:
+        user_vec = vectorizer.transform([user_text])
+        case_vecs = vectorizer.transform(cases_df["complaint_text"])
+
+        sims = cosine_similarity(user_vec, case_vecs).flatten()
+        cases_df["similarity"] = sims
+
+        results = cases_df.sort_values(by="similarity", ascending=False).head(top_k)
+
+        # filter low similarity
+        results = results[results["similarity"] > 0.2]
+
+        return results
+
+    except Exception as e:
+        return pd.DataFrame()
+
 # -------------------------------------------------
 # HEADER
 # -------------------------------------------------
@@ -140,12 +162,14 @@ if st.button("🚀 Analyze Complaint"):
 
     with st.spinner("🧠 AI analyzing..."):
 
-        # ✅ REPLACED run_pipeline
         result = predict_ipc(complaint)
 
         preds = [(result.get("section", "N/A"), result.get("confidence", 0.0))]
         explanation = result.get("description", "No explanation available")
-        cases = pd.DataFrame()  # temporary (we fix later)
+
+        # ✅ FIXED: GET REAL SIMILAR CASES
+        cases = get_similar_cases(complaint)
+
         ipc_details = {}
 
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Cases", "👨‍⚖️ Lawyers"])
@@ -214,7 +238,6 @@ if st.button("🚀 Analyze Complaint"):
         else:
             st.dataframe(lawyers, use_container_width=True)
 
-    # Footer
     render_html("""
     <div style="text-align:center;margin-top:20px">
         <p style="color:#94a3b8">⚠️ Educational purpose only</p>
