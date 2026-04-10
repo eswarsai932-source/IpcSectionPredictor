@@ -1,13 +1,6 @@
 import joblib
 import numpy as np
-
-
-# ======================================================
-# Load trained artifacts ONCE
-# ======================================================
-model = joblib.load("ipc_model.pkl")
-vectorizer = joblib.load("tfidf_vectorizer.pkl")
-mlb = joblib.load("label_binarizer.pkl")
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 # ======================================================
@@ -33,7 +26,7 @@ def preprocess(text):
 
 
 # ======================================================
-# 🔹 Rule Engine (IMPORTANT)
+# 🔹 Rule Engine
 # ======================================================
 def rule_engine(text):
     text = text.lower()
@@ -53,9 +46,7 @@ def rule_engine(text):
 # ======================================================
 # 🔹 ML Prediction
 # ======================================================
-def predict_ipc_with_confidence(crime_text, top_k=3):
-    text = preprocess(crime_text)
-
+def predict_ipc_with_confidence(text, model, vectorizer, mlb, top_k=3):
     X = vectorizer.transform([text])
     probs = model.predict_proba(X)[0]
 
@@ -71,13 +62,18 @@ def predict_ipc_with_confidence(crime_text, top_k=3):
 
 
 # ======================================================
-# 🔥 FINAL HYBRID PREDICTION (IMPORTANT)
+# 🔥 FINAL FUNCTION (THIS FIXES YOUR ERROR)
 # ======================================================
-def final_prediction(crime_text):
+def predict_ipc(crime_text):
+    # ✅ Load models INSIDE function (important)
+    model = joblib.load("ipc_model.pkl")
+    vectorizer = joblib.load("tfidf_vectorizer.pkl")
+    mlb = joblib.load("label_binarizer.pkl")
+
     text = preprocess(crime_text)
 
     rule_preds = rule_engine(text)
-    ml_preds = predict_ipc_with_confidence(text)
+    ml_preds = predict_ipc_with_confidence(text, model, vectorizer, mlb)
 
     final = []
 
@@ -90,9 +86,26 @@ def final_prediction(crime_text):
         if ipc not in [f[0] for f in final]:
             final.append((ipc, score))
 
-    return final[:3]
-from sklearn.metrics.pairwise import cosine_similarity
+    final = final[:3]
 
+    # Convert to app.py format
+    if final:
+        return {
+            "section": final[0][0],
+            "confidence": final[0][1],
+            "description": f"Predicted IPC Sections: {', '.join([f[0] for f in final])}"
+        }
+    else:
+        return {
+            "section": "N/A",
+            "confidence": 0.0,
+            "description": "No prediction available"
+        }
+
+
+# ======================================================
+# 🔹 Similar Cases
+# ======================================================
 def get_similar_cases(text, df, vectorizer, top_n=3):
     text_vec = vectorizer.transform([text])
     dataset_vec = vectorizer.transform(df['complaint_text'])
