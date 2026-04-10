@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # -------------------------------------------------
-# STYLE (SAFE CSS ONLY)
+# STYLE
 # -------------------------------------------------
 st.markdown("""
 <style>
@@ -133,61 +133,59 @@ if st.button("🚀 Analyze Complaint"):
     tab1, tab2, tab3 = st.tabs(["⚖️ IPC Sections", "📚 Similar Cases", "👨‍⚖️ Lawyers"])
 
     # ---------------- TAB 1 ----------------
- with tab1:
+    with tab1:
 
-    for ipc, score in preds:
-        ipc = str(ipc).strip()
+        for ipc, score in preds:
+            ipc = str(ipc).strip()
 
-        # color logic
-        if score >= 0.8:
-            color = "#22c55e"   # green
-        elif score >= 0.5:
-            color = "#f59e0b"   # yellow
-        else:
-            color = "#ef4444"   # red
+            if score >= 0.8:
+                color = "#22c55e"
+            elif score >= 0.5:
+                color = "#f59e0b"
+            else:
+                color = "#ef4444"
 
-        st.markdown(f"""
-        <div style="
-            background:#2f2f2f;
-            padding:20px;
-            border-radius:14px;
-            margin-bottom:20px;
-            color:white;
-        ">
+            st.markdown(f"""
+<div style="
+    background:#2f2f2f;
+    padding:20px;
+    border-radius:14px;
+    margin-bottom:20px;
+    color:white;
+">
 
-        <h4 style="color:#3b82f6;">⚖️ IPC Section {ipc}</h4>
+<h4 style="color:#3b82f6;">⚖️ IPC Section {ipc}</h4>
 
-        <!-- progress bar -->
-        <div style="
-            width:100%;
-            background:#d1d5db;
-            height:10px;
-            border-radius:10px;
-            margin:10px 0;
-        ">
-            <div style="
-                width:{score*100}%;
-                background:{color};
-                height:10px;
-                border-radius:10px;
-            "></div>
-        </div>
+<div style="
+    width:100%;
+    background:#d1d5db;
+    height:10px;
+    border-radius:10px;
+    margin:10px 0;
+">
+    <div style="
+        width:{score*100}%;
+        background:{color};
+        height:10px;
+        border-radius:10px;
+    "></div>
+</div>
 
-        <p><b>Confidence:</b> {score*100:.1f}%</p>
+<p><b>Confidence:</b> {score*100:.1f}%</p>
 
-        <p><b>📖 Description:</b><br>{explanation}</p>
+<p><b>📖 Description:</b><br>{explanation}</p>
 
-        <p><b>🧾 Simple Explanation:</b><br>{explanation}</p>
+<p><b>🧾 Simple Explanation:</b><br>{explanation}</p>
 
-        <p><b>⚖️ Punishment:</b><br>
-        Simple imprisonment or fine (if available)
-        </p>
+<p><b>⚖️ Punishment:</b><br>
+Simple imprisonment or fine (if available)
+</p>
 
-        </div>
-        """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
-    st.markdown("### 🧾 Legal Explanation")
-    st.info(explanation)
+        st.markdown("### 🧾 Legal Explanation")
+        st.info(explanation)
 
     # ---------------- TAB 2 ----------------
     with tab2:
